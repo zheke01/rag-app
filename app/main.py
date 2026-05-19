@@ -3,15 +3,14 @@
 import click
 import sys
 import os
+import json
 
 # Add app directory to path
 sys.path.insert(0, os.path.dirname(__file__))
 
 from app.config import get_config
-from app.db import get_db_client
-from app.ingest import ingest_documents
-from app.embeddings import get_embedding
-from app.retrieve import retrieve_documents
+from app.ingest import ingest_file
+from app.retrieve import retrieve_context
 from app.chat import chat_with_rag
 
 
@@ -26,12 +25,8 @@ def cli():
 def ingest(file_path: str):
     """Ingest documents into vector database."""
     try:
-        config = get_config()
-        db_client = get_db_client(config.supabase_url, config.supabase_key)
-        
-        click.echo(f"Ingesting documents from: {file_path}")
-        total_chunks = ingest_documents(file_path, db_client, config)
-        click.echo(f"✓ Successfully ingested {total_chunks} chunks")
+        click.echo(f"Starting ingestion: {file_path}")
+        ingest_file(file_path)
         
     except Exception as e:
         click.echo(f"✗ Error during ingestion: {e}", err=True)
@@ -44,20 +39,26 @@ def chat(query: str):
     """Chat with RAG system."""
     try:
         config = get_config()
-        db_client = get_db_client(config.supabase_url, config.supabase_key)
         
         click.echo("Searching documents...")
+        documents = retrieve_context(query)
         
-        # Get embedding for query
-        query_embedding = get_embedding(query, config.embedding_model)
+        if not documents:
+            click.echo("No relevant documents found.")
+            return
         
-        # Retrieve similar documents
-        documents = retrieve_documents(query_embedding, db_client, config)
+        click.echo(f"Found {len(documents)} relevant chunks")
         
-        # Build context
-        context = "\n\n".join([doc.get("content", "") for doc in documents])
+        # Build context from retrieved documents
+        context_parts = []
+        for i, doc in enumerate(documents, 1):
+            similarity = doc.get("similarity", 0)
+            content = doc.get("content", "")
+            context_parts.append(f"[{i}] (similarity: {similarity:.2f})\n{content[:200]}...")
         
-        click.echo("Generating response...")
+        context = "\n\n".join(context_parts)
+        
+        click.echo("\nGenerating response...")
         response = chat_with_rag(query, context, config.chat_model)
         
         click.echo(f"\nAnswer:\n{response}")

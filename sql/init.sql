@@ -1,15 +1,16 @@
--- Initialize vector extension and documents table
+-- Enable vector extension for pgvector
 CREATE EXTENSION IF NOT EXISTS vector;
 
+-- Create documents table
 CREATE TABLE IF NOT EXISTS documents (
     id BIGSERIAL PRIMARY KEY,
     content TEXT NOT NULL,
+    metadata JSONB DEFAULT '{}'::jsonb,
     embedding vector(1536),
-    metadata JSONB,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Create index for vector similarity search
+-- Create index on embedding column for faster similarity search
 CREATE INDEX IF NOT EXISTS documents_embedding_idx
 ON documents USING ivfflat (embedding vector_cosine_ops)
 WITH (lists = 100);
