@@ -2,6 +2,8 @@
 
 from openai import OpenAI, APIError
 from app.config import get_config
+from app.retrieve import retrieve_context
+from app.prompt_builder import build_prompt
 
 
 _client: OpenAI = None
@@ -20,40 +22,18 @@ def _get_openai_client() -> OpenAI:
     return _client
 
 
-def chat_with_rag(
-    query: str,
-    context: str,
-    model: str,
-    temperature: float = 0.7
-) -> str:
-    """Generate response using GPT with RAG context.
+def _generate_response(prompt: str, model: str, temperature: float = 0.7) -> str:
+    """Generate response using OpenAI Chat API.
     
     Args:
-        query: The user's question
-        context: Retrieved context from documents
-        model: Model name to use for generation
-        temperature: Temperature for response generation
+        prompt: The complete prompt
+        model: Model name to use
+        temperature: Temperature for generation
         
     Returns:
         Generated response text
-        
-    Raises:
-        ValueError: If query is empty
-        Exception: If API call fails
     """
-    if not query or not query.strip():
-        raise ValueError("Query cannot be empty")
-    
     client = _get_openai_client()
-    
-    prompt = f"""You are a helpful assistant. Answer the question using the provided context.
-
-Context:
-{context}
-
-Question: {query}
-
-Answer:"""
     
     try:
         response = client.chat.completions.create(
@@ -67,3 +47,47 @@ Answer:"""
         raise Exception(f"OpenAI API error: {str(e)}")
     except Exception as e:
         raise Exception(f"Failed to generate response: {str(e)}")
+
+
+def answer_question(question: str, debug: bool = False) -> str:
+    """Answer a question using RAG.
+    
+    Process:
+    1. Retrieve relevant context
+    2. Build prompt with context
+    3. Generate response using LLM
+    4. Return answer
+    
+    Args:
+        question: The user's question
+        debug: If True, print debug information
+        
+    Returns:
+        Generated answer
+        
+    Raises:
+        ValueError: If question is empty
+        Exception: If retrieval or generation fails
+    """
+    if not question or not question.strip():
+        raise ValueError("Question cannot be empty")
+    
+    config = get_config()
+    
+    # Retrieve context
+    contexts = retrieve_context(question)
+    
+    if debug:
+        print(f"\n[DEBUG] Found {len(contexts)} relevant chunks")
+        for i, ctx in enumerate(contexts, 1):
+            similarity = ctx.get("similarity", 0)
+            print(f"  [{i}] Similarity: {similarity:.2%}")
+            print(f"      Content: {ctx.get('content', '')[:100]}...")
+    
+    # Build prompt
+    prompt = build_prompt(question, contexts)
+    
+    # Generate response
+    answer = _generate_response(prompt, config.chat_model)
+    
+    return answer

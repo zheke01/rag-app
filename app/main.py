@@ -3,68 +3,107 @@
 import click
 import sys
 import os
-import json
 
-# Add app directory to path
-sys.path.insert(0, os.path.dirname(__file__))
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from app.config import get_config
 from app.ingest import ingest_file
-from app.retrieve import retrieve_context
-from app.chat import chat_with_rag
+from app.chat import answer_question
 
 
 @click.group()
 def cli():
-    """RAG Application CLI."""
+    """RAG Application - Ask questions about your documents."""
     pass
 
 
 @cli.command()
-@click.argument("file_path", type=click.Path(exists=True))
-def ingest(file_path: str):
-    """Ingest documents into vector database."""
+@click.option("--file", required=True, type=click.Path(exists=True), help="Path to text file to ingest")
+def ingest(file: str):
+    """Ingest a document into the vector database."""
     try:
-        click.echo(f"Starting ingestion: {file_path}")
-        ingest_file(file_path)
+        click.echo("=" * 50)
+        click.echo("RAG Ingestion")
+        click.echo("=" * 50)
+        ingest_file(file)
+        click.echo("=" * 50)
+        click.echo("✓ Ingestion completed successfully!")
         
+    except FileNotFoundError as e:
+        click.echo(f"✗ File error: {e}", err=True)
+        sys.exit(1)
+    except ValueError as e:
+        click.echo(f"✗ Validation error: {e}", err=True)
+        sys.exit(1)
     except Exception as e:
         click.echo(f"✗ Error during ingestion: {e}", err=True)
         sys.exit(1)
 
 
 @cli.command()
-@click.option("--query", prompt="Enter your question", help="Query for RAG")
-def chat(query: str):
-    """Chat with RAG system."""
+@click.option("--debug", is_flag=True, help="Show debug information")
+def chat(debug: bool):
+    """Chat with the RAG system - ask questions about ingested documents."""
     try:
         config = get_config()
         
-        click.echo("Searching documents...")
-        documents = retrieve_context(query)
+        click.echo("=" * 50)
+        click.echo("RAG Chat")
+        click.echo("=" * 50)
+        click.echo("Type 'exit' to quit")
+        click.echo("=" * 50)
         
-        if not documents:
-            click.echo("No relevant documents found.")
-            return
+        while True:
+            try:
+                question = click.prompt("\nYour question")
+                
+                if question.lower() == "exit":
+                    click.echo("Goodbye!")
+                    break
+                
+                if not question.strip():
+                    continue
+                
+                click.echo("\nSearching context...")
+                answer = answer_question(question, debug=debug)
+                
+                click.echo(f"\nAnswer:\n{answer}")
+                
+            except ValueError as e:
+                click.echo(f"✗ Input error: {e}", err=True)
+            except Exception as e:
+                click.echo(f"✗ Error: {e}", err=True)
+    
+    except Exception as e:
+        click.echo(f"✗ Fatal error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command()
+def status():
+    """Check configuration and database connection."""
+    try:
+        config = get_config()
         
-        click.echo(f"Found {len(documents)} relevant chunks")
+        click.echo("Configuration Status:")
+        click.echo(f"  OpenAI API Key: {'✓' if config.openai_api_key else '✗'}")
+        click.echo(f"  Supabase URL: {'✓' if config.supabase_url else '✗'}")
+        click.echo(f"  Supabase Key: {'✓' if config.supabase_key else '✗'}")
+        click.echo(f"  Embedding Model: {config.embedding_model}")
+        click.echo(f"  Chat Model: {config.chat_model}")
+        click.echo(f"  Chunk Size: {config.chunk_size}")
+        click.echo(f"  Chunk Overlap: {config.chunk_overlap}")
+        click.echo(f"  Top K: {config.top_k}")
         
-        # Build context from retrieved documents
-        context_parts = []
-        for i, doc in enumerate(documents, 1):
-            similarity = doc.get("similarity", 0)
-            content = doc.get("content", "")
-            context_parts.append(f"[{i}] (similarity: {similarity:.2f})\n{content[:200]}...")
-        
-        context = "\n\n".join(context_parts)
-        
-        click.echo("\nGenerating response...")
-        response = chat_with_rag(query, context, config.chat_model)
-        
-        click.echo(f"\nAnswer:\n{response}")
+        if not all([config.openai_api_key, config.supabase_url, config.supabase_key]):
+            click.echo("\n⚠ Missing configuration - check .env file", err=True)
+            sys.exit(1)
+        else:
+            click.echo("\n✓ All settings configured")
         
     except Exception as e:
-        click.echo(f"✗ Error during chat: {e}", err=True)
+        click.echo(f"✗ Error: {e}", err=True)
         sys.exit(1)
 
 

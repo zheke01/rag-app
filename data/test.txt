@@ -1,0 +1,33 @@
+Supabase is a backend platform built on PostgreSQL that provides a suite of tools and services to help developers build applications faster. It is an open-source alternative to Firebase, offering real-time capabilities, authentication, and a powerful REST and GraphQL API.
+
+Key features of Supabase include:
+
+1. PostgreSQL Database: Supabase is built on top of PostgreSQL, one of the most powerful open-source databases. It provides a managed PostgreSQL database in the cloud with automatic backups and high availability.
+
+2. Real-time Subscriptions: With Supabase, you can subscribe to database changes in real-time. This allows you to build reactive applications that update instantly when data changes.
+
+3. Authentication: Supabase provides built-in authentication with support for email/password, OAuth (Google, GitHub, etc.), and magic links. It handles all the security aspects including password hashing and session management.
+
+4. Vector Database: Supabase includes pgvector extension built into PostgreSQL, enabling vector similarity search. This is useful for machine learning applications, semantic search, and recommendation systems.
+
+5. Storage: Supabase provides file storage capabilities that integrate seamlessly with your database. You can store and serve files directly from Supabase.
+
+6. Edge Functions: Supabase allows you to run serverless functions at the edge, close to your users, for low-latency responses.
+
+7. Real-time API: Supabase automatically generates a REST API from your database schema. You can also use the real-time API to listen for changes.
+
+8. Row Level Security: Supabase supports PostgreSQL's Row Level Security (RLS) policies, allowing you to define access control rules directly in the database.
+
+Getting started with Supabase is straightforward:
+1. Sign up for a free account on supabase.com
+2. Create a new project
+3. Get your API credentials
+4. Start building your application
+
+Supabase is perfect for startup teams and businesses that need to move fast without worrying about backend infrastructure. It has a generous free tier and scales as your application grows.
+
+The Supabase community is vibrant and active, with excellent documentation and many examples available online. Whether you are building a mobile app, web application, or API, Supabase provides all the backend services you need in one integrated platform.
+
+pgvector is a powerful PostgreSQL extension that enables you to store and search vector embeddings efficiently. It is particularly useful for machine learning and semantic search applications. With Supabase's integration of pgvector, you can easily build AI-powered applications that understand semantic meaning.
+
+Vector similarity search with pgvector allows you to find similar items based on their embeddings. This is used in recommendation engines, image search, document similarity, and many other applications.
