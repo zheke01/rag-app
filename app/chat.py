@@ -3,6 +3,7 @@
 from openai import OpenAI, APIError
 from app.config import get_config
 from app.retrieve import retrieve_context
+from app.hybrid_search import retrieve_context_hybrid, hybrid_retrieve_context
 from app.prompt_builder import build_prompt
 
 
@@ -49,11 +50,11 @@ def _generate_response(prompt: str, model: str, temperature: float = 0.7) -> str
         raise Exception(f"Failed to generate response: {str(e)}")
 
 
-def answer_question(question: str, debug: bool = False) -> str:
-    """Answer a question using RAG.
+def answer_question(question: str, debug: bool = False, search_mode: str = "hybrid") -> str:
+    """Answer a question using RAG with configurable search mode.
     
     Process:
-    1. Retrieve relevant context
+    1. Retrieve relevant context (using semantic, keyword, or hybrid search)
     2. Build prompt with context
     3. Generate response using LLM
     4. Return answer
@@ -61,6 +62,7 @@ def answer_question(question: str, debug: bool = False) -> str:
     Args:
         question: The user's question
         debug: If True, print debug information
+        search_mode: Search mode - "semantic", "keyword", or "hybrid" (default)
         
     Returns:
         Generated answer
@@ -74,14 +76,30 @@ def answer_question(question: str, debug: bool = False) -> str:
     
     config = get_config()
     
-    # Retrieve context
-    contexts = retrieve_context(question)
+    # Retrieve context using hybrid search
+    contexts, explanation = hybrid_retrieve_context(
+        question, 
+        mode=search_mode,
+        debug=debug
+    )
     
     if debug:
-        print(f"\n[DEBUG] Found {len(contexts)} relevant chunks")
+        if explanation:
+            print(f"\n{explanation}\n")
+        print(f"[DEBUG] Found {len(contexts)} relevant chunks")
         for i, ctx in enumerate(contexts, 1):
             similarity = ctx.get("similarity", 0)
-            print(f"  [{i}] Similarity: {similarity:.2%}")
+            rrf_score = ctx.get("rrf_score", 0)
+            rank = ctx.get("rank", 0)
+            
+            print(f"  [{i}] ", end="")
+            if search_mode == "hybrid" and rrf_score > 0:
+                print(f"RRF Score: {rrf_score:.4f}")
+            elif search_mode == "semantic" and similarity > 0:
+                print(f"Similarity: {similarity:.2%}")
+            elif search_mode == "keyword" and rank > 0:
+                print(f"Rank: {rank:.4f}")
+            
             print(f"      Content: {ctx.get('content', '')[:100]}...")
     
     # Build prompt

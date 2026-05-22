@@ -28,6 +28,10 @@ class Config:
     # Retrieval
     top_k: int
     
+    # Hybrid Search
+    search_mode: str  # "semantic", "keyword", or "hybrid"
+    rrf_k: int  # RRF constant (typically 60)
+    
     @classmethod
     def from_env(cls) -> "Config":
         """Load configuration from environment variables."""
@@ -40,6 +44,8 @@ class Config:
             chunk_size=int(os.getenv("CHUNK_SIZE", "1000")),
             chunk_overlap=int(os.getenv("CHUNK_OVERLAP", "200")),
             top_k=int(os.getenv("TOP_K", "5")),
+            search_mode=os.getenv("SEARCH_MODE", "hybrid"),
+            rrf_k=int(os.getenv("RRF_K", "60")),
         )
 
 

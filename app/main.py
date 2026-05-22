@@ -43,13 +43,20 @@ def ingest(file: str):
 
 @cli.command()
 @click.option("--debug", is_flag=True, help="Show debug information")
-def chat(debug: bool):
-    """Chat with the RAG system - ask questions about ingested documents."""
+@click.option("--mode", type=click.Choice(["semantic", "keyword", "hybrid"], case_sensitive=False), default="hybrid", help="Search mode (default: hybrid)")
+def chat(debug: bool, mode: str):
+    """Chat with the RAG system - ask questions about ingested documents.
+    
+    Search modes:
+    - semantic: Vector similarity search (meaning-based)
+    - keyword: Full-text search (exact word matching)
+    - hybrid: Combined search with RRF fusion (recommended)
+    """
     try:
         config = get_config()
         
         click.echo("=" * 50)
-        click.echo("RAG Chat")
+        click.echo(f"RAG Chat - {mode.upper()} Search Mode")
         click.echo("=" * 50)
         click.echo("Type 'exit' to quit")
         click.echo("=" * 50)
@@ -65,8 +72,8 @@ def chat(debug: bool):
                 if not question.strip():
                     continue
                 
-                click.echo("\nSearching context...")
-                answer = answer_question(question, debug=debug)
+                click.echo(f"\nSearching context using {mode} search...")
+                answer = answer_question(question, debug=debug, search_mode=mode)
                 
                 click.echo(f"\nAnswer:\n{answer}")
                 
@@ -95,6 +102,8 @@ def status():
         click.echo(f"  Chunk Size: {config.chunk_size}")
         click.echo(f"  Chunk Overlap: {config.chunk_overlap}")
         click.echo(f"  Top K: {config.top_k}")
+        click.echo(f"  Search Mode: {config.search_mode}")
+        click.echo(f"  RRF K: {config.rrf_k}")
         
         if not all([config.openai_api_key, config.supabase_url, config.supabase_key]):
             click.echo("\n⚠ Missing configuration - check .env file", err=True)
